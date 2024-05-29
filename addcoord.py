@@ -2,12 +2,13 @@ import geocoder
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 
+
 class AddCoord:
     def __init__(self) -> None:
         self.full_addresses = None
         self.lat_lon_series = None
 
-    def _find_duplicate_address(self, address_list) -> list:
+    def _find_duplicate_address(self, address_list: list) -> list:
         '''
         Checks if any addresses in a list of addresses are duplicated. 
         Returns duplicate addresses
@@ -31,35 +32,36 @@ class AddCoord:
         
         return duplicate_addresses
     
-    def create_main_address(self, *addresses) -> pd.core.series.Series:
+    def create_main_address(self, *addresses: pd.Series) -> pd.Series:
         '''
         Returns a full address if multiple addresses from different sources are passed.
 
         Parameters
         ----------
-        *addresses : pandas.core.series.Series
+        *addresses : pd.Series
             Any number of address strings passed in as series objects. 
             Series objects must be equal in length.
 
         Returns
         -------
-        full_address : pandas.core.series.Series
+        full_address : pd.Series
             A series of full addresses concatenated from the various series passed.
         '''
         cleaned_addresses = [address.fillna('').str.replace(',', '').str.strip() for address in addresses]
         full_addresses = pd.concat(cleaned_addresses, axis=1).apply(lambda row: ' '.join(row), axis=1)
 
-        # Check for duplicated addresses
+        # Check for duplicated addresses to alert the users if there are duplicate addresses after 
+        # addresses have been created.
         duplicate_addresses = self._find_duplicate_address(full_addresses)
         if duplicate_addresses:
             print(f'After address processing, {len(duplicate_addresses)} duplicated addresses were found')
 
-        # Update self.full_addresses attribute
+        # Update self.full_addresses attribute so that it can be accessed without any new function call.
         self.full_addresses = full_addresses
 
         return full_addresses
     
-    def geocode(self, address) -> str:
+    def geocode(self, address: str) -> str:
         '''
         Returns latitude and longitude coordinates of addresses.
 
@@ -79,7 +81,7 @@ class AddCoord:
         else:
             return None
         
-    def _geocode_wrapper(self, address, index) -> tuple:
+    def _geocode_wrapper(self, address: str, index: dict) -> tuple:
         '''
         Returns lat,lon coordinates and corresponding indexes of the list of address passed to it.
         Utilizes the custom geocode function
@@ -108,7 +110,7 @@ class AddCoord:
         else:
             return (None, index)
         
-    def concurrent_geocode(self, addresses, index_dict, num_threads=None) -> tuple:
+    def concurrent_geocode(self, addresses: list, index_dict: dict, num_threads: int=None) -> tuple:
         '''
         Runs the geocode_wrapper function in parallel with multiple threads.
 
@@ -148,14 +150,14 @@ class AddCoord:
 
         return (lat_lon_list, failed_indexes, successful_indexes)
     
-    def fetch_coordinates(self, addresses, num_threads=None) -> pd.core.series.Series:
+    def fetch_coordinates(self, addresses: list | pd.Series, num_threads: int=None) -> pd.Series:
         '''
         Returns a Series object containing corresponding latitude and longitude coordinates of 
         addresses passed to it.
 
         Parameters
         ----------
-        addresses : list | pandas.core.series.Series
+        addresses : list | pd.Series
             A list or series of addresses
         num_threads : int (optional; default = None)
             Optional parameter to specify the number of threads to use for parallel processing. 
@@ -163,7 +165,7 @@ class AddCoord:
 
         Returns
         -------
-        lat_lon_series : pandas.core.series.Series
+        lat_lon_series : pd.Series
             A Series object containing corresponding latitude and longitude coordinates of 
             addresses passed to it
         '''
