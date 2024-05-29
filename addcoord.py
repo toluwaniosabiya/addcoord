@@ -61,7 +61,7 @@ class AddCoord:
 
         return full_addresses
     
-    def get_geocode(self, address: str) -> str:
+    def get_lat_lon(self, address: str) -> str:
         '''
         Returns latitude and longitude coordinates of addresses.
 
@@ -81,7 +81,7 @@ class AddCoord:
         else:
             return None
         
-    def _get_geocode_wrapper(self, address: str, index: dict) -> tuple:
+    def _get_lat_lon_wrapper(self, address: str, index: dict) -> tuple:
         '''
         Returns lat,lon coordinates and corresponding indexes of the list of address passed to it.
         Utilizes the custom geocode function
@@ -104,15 +104,15 @@ class AddCoord:
             value is the index of each item in the addresses list in the main_concurrent function.
 
         '''
-        lat_lon = self.get_geocode(address)
+        lat_lon = self.get_lat_lon(address)
         if lat_lon is not None:
             return (lat_lon, index)
         else:
             return (None, index)
         
-    def multithread_get_geocode(self, addresses: list, index_dict: dict, num_threads: int=None) -> tuple:
+    def multithread_get_lat_lon(self, addresses: list, index_dict: dict, num_threads: int=None) -> tuple:
         '''
-        Runs the _get_geocode_wrapper function in parallel with multiple threads.
+        Runs the _get_lat_lon_wrapper function in parallel with multiple threads.
 
         Parameters
         ----------
@@ -140,7 +140,7 @@ class AddCoord:
         '''
         with ThreadPoolExecutor(num_threads) as executor:
             print(f'Getting coordinates with {executor._max_workers} threads...' )
-            indexed_results = list(executor.map(self._get_geocode_wrapper, addresses, index_dict.items()))
+            indexed_results = list(executor.map(self._get_lat_lon_wrapper, addresses, index_dict.items()))
 
             lat_lon_list = [result[0] for result in indexed_results]
             failed_indexes_list = [result[1] for result in indexed_results if result[0] is None]
@@ -173,7 +173,7 @@ class AddCoord:
         # track failures and retries 
         index_dict = {k: v for v, k in enumerate(addresses)}
 
-        lat_lon_list, failed_indexes, successful_indexes = self.multithread_get_geocode(addresses, index_dict, num_threads)
+        lat_lon_list, failed_indexes, successful_indexes = self.multithread_get_lat_lon(addresses, index_dict, num_threads)
 
         retries = 0
         while failed_indexes and retries < 10:
@@ -183,8 +183,8 @@ class AddCoord:
             index_dict = failed_indexes
             index_list = index_dict.values()
 
-            # Retry multithread_get_geocode for failed entries
-            lat_lon_retries, failed_indexes, successful_indexes = self.multithread_get_geocode([addresses[index] for index in index_list], index_dict, num_threads)
+            # Retry multithread_get_lat_lon for failed entries
+            lat_lon_retries, failed_indexes, successful_indexes = self.multithread_get_lat_lon([addresses[index] for index in index_list], index_dict, num_threads)
             
             # Update lat_lon_list
             update_list = [(x, y) for x, y in zip(lat_lon_retries, successful_indexes.values())]
